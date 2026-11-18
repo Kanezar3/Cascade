@@ -1,0 +1,50 @@
+{
+  "network": "studionet",
+  "rpc_url": "https://studio.genlayer.com/api",
+  "evidence_probe_address": "0x7A500B8D5FD75A28aA282Be6ECF274f49d6D7dc8",
+  "deploy_tx": "0x9b8624c6e0eb17f0b942f6557c0e4774d4056d04254dc7da0e76d11494589940",
+  "probes": [
+    {
+      "name": "danluu_cloudflare_miami_bgp",
+      "tx_hash": "0xd7bc406a43dc95854ed73c4aced2803577889659b66b86e4f9f560a763006f90",
+      "start_line": 54,
+      "end_line": 60,
+      "result": {
+        "http_status": 200,
+        "ok": true,
+        "probe_url": "https://raw.githubusercontent.com/danluu/post-mortems/630562e55281ff28961704e8042a7dc9569a96e7/README.md",
+        "snippet_len": 1045,
+        "snippet_preview": "[Cloudflare](https://blog.cloudflare.com/route-leak-incident-january-22-2026/). An automated routing policy configuration error removed prefix list filters from BGP export policies in Cloudflare's Miami router, causing it to advertise inter",
+        "snippet_sha256": "bf89044c7bd43ef99f6ba6ad595d2351e5fabe1924f7c3b42170d426f3c10604"
+      }
+    },
+    {
+      "name": "danluu_workers_kv_downstream",
+      "tx_hash": "0x736f6ab9920ac5bfd7dd9922382206fa336282822c9760e7fdf94c3e3d3e0d35",
+      "start_line": 303,
+      "end_line": 308,
+      "result": {
+        "http_status": 200,
+        "ok": true,
+        "probe_url": "https://raw.githubusercontent.com/danluu/post-mortems/630562e55281ff28961704e8042a7dc9569a96e7/README.md",
+        "snippet_len": 988,
+        "snippet_preview": "[Cloudflare](https://blog.cloudflare.com/cloudflare-incident-on-august-21-2025/). A single customer's traffic surge from AWS us-east-1 saturated Cloudflare's peering links; AWS's BGP prefix withdrawals to mitigate congestion paradoxically r",
+        "snippet_sha256": "3282930aeb65fdda85d7550b7cf3a170388aa3941230a6dc94f052448923913d"
+      }
+    },
+    {
+      "name": "protectai_rebuff_injection_test",
+      "tx_hash": "0xf1a1fa0c19605e485b7ea08ac436d23a215632256debb3d0597ca29a415c0b0b",
+      "start_line": 1,
+      "end_line": 30,
+      "result": {
+        "http_status": 200,
+        "ok": true,
+        "probe_url": "https://raw.githubusercontent.com/protectai/rebuff/4d2fe064abf164e7381556d23e48e210080f8afa/python-sdk/tests/test_sdk.py",
+        "snippet_len": 642,
+        "snippet_preview": "from typing import List, Dict import pytest from rebuff.sdk import RebuffSdk from .utils import get_environment_variable @pytest.fixture() def rebuff() -> RebuffSdk: rb = RebuffSdk( get_environment_variable(\"OPENAI_API_KEY\"), get_environmen",
+        "snippet_sha256": "4aa725a4952ecd6d49f6045f2f76cea9f2087b61c5a3d541ccc8f4f4e4ba86e3"
+      }
+    }
+  ]
+}
