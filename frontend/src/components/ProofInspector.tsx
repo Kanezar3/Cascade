@@ -1,18 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ArrowRight,
   CheckCircle2,
   Columns2,
   ExternalLink,
   FileCode2,
   Fingerprint,
   LayoutList,
-  ShieldCheck,
-  ShieldX,
 } from 'lucide-react'
 import type { CascadeCase, LiveTxStatus, NormalizedProof } from '../types/cascade'
 import { computeSha256Hex } from '../lib/validation'
-import { VerdictBadge } from './VerdictBadge'
+import { getVerdictDotClass, VerdictBadge } from './VerdictBadge'
 import { AppealWindowPanel } from './AppealWindowPanel'
 
 interface ProofInspectorProps {
@@ -23,32 +20,105 @@ interface ProofInspectorProps {
 }
 
 const FILTER_OPTIONS = [
-  'ALL',
-  'UPSTREAM_AT_FAULT',
-  'DOWNSTREAM_AT_FAULT',
-  'INSUFFICIENT_TRACE',
-  'TOO_VAGUE',
-  'EXPIRED_REFUNDED',
+  { value: 'ALL', label: 'All' },
+  { value: 'UPSTREAM_AT_FAULT', label: 'Upstream Fault' },
+  { value: 'DOWNSTREAM_AT_FAULT', label: 'Downstream Fault' },
+  { value: 'INSUFFICIENT_TRACE', label: 'Insufficient Trace' },
+  { value: 'TOO_VAGUE', label: 'Too Vague' },
+  { value: 'EXPIRED_REFUNDED', label: 'Expired Refunded' },
 ] as const
 
-function renderHighlightedExcerpt(excerpt: string, quote: string) {
-  if (!excerpt) {
-    return <span className="text-[#475569] italic">No snippet excerpt recorded.</span>
+type FilterValue = (typeof FILTER_OPTIONS)[number]['value']
+
+function formatWeiShort(weiInput: string | number | bigint | undefined): string {
+  try {
+    const wei = BigInt(weiInput || 0)
+    const base = 10n ** 18n
+    const whole = wei / base
+    const frac = (wei % base).toString().padStart(18, '0').slice(0, 4)
+    return `${whole}.${frac}`
+  } catch {
+    return '0.0000'
   }
-  if (!quote || !excerpt.includes(quote)) {
-    return <span>{excerpt}</span>
+}
+
+function renderLineWithQuote(line: string, quote: string) {
+  if (!quote || !line.includes(quote)) {
+    return <span>{line || ' '}</span>
   }
-  const idx = excerpt.indexOf(quote)
-  const before = excerpt.slice(0, idx)
-  const after = excerpt.slice(idx + quote.length)
+  const idx = line.indexOf(quote)
+  const before = line.slice(0, idx)
+  const after = line.slice(idx + quote.length)
   return (
     <>
       <span>{before}</span>
-      <mark className="rounded bg-[#451A03] px-1 py-0.5 text-[#FCD34D] ring-1 ring-[#D97706]/50">
+      <mark className="rounded-xs bg-amber-500/20 px-0.5 text-amber-200 ring-1 ring-amber-500/35">
         {quote}
       </mark>
       <span>{after}</span>
     </>
+  )
+}
+
+function EvidenceCodeViewer({
+  excerpt,
+  quote,
+  startLine,
+}: {
+  excerpt: string
+  quote: string
+  startLine: number
+}) {
+  if (!excerpt) {
+    return (
+      <div className="rounded-md border border-white/[0.08] bg-[#09090B] px-4 py-6 text-center text-xs text-[#71717A]">
+        No snippet excerpt recorded.
+      </div>
+    )
+  }
+
+  const lines = excerpt.split('\n')
+  const baseLine = startLine > 0 ? startLine : 1
+  const singleLineQuoteMatch = Boolean(quote && excerpt.includes(quote) && !quote.includes('\n'))
+
+  return (
+    <div className="overflow-x-auto rounded-md border border-white/[0.08] bg-[#09090B]">
+      {singleLineQuoteMatch ? (
+        <div className="max-h-64 overflow-y-auto py-2 font-mono text-xs leading-6">
+          {lines.map((line, idx) => {
+            const hasMatch = line.includes(quote)
+            return (
+              <div
+                key={idx}
+                className={`flex px-3 ${
+                  hasMatch ? 'bg-amber-500/[0.06]' : 'hover:bg-white/[0.02]'
+                }`}
+              >
+                <span className="w-10 shrink-0 select-none pr-3 text-right text-[#52525B]">
+                  {baseLine + idx}
+                </span>
+                <span className="whitespace-pre-wrap break-all text-[#E4E4E7]">
+                  {renderLineWithQuote(line, quote)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="max-h-64 overflow-y-auto py-2 font-mono text-xs leading-6">
+          {lines.map((line, idx) => (
+            <div key={idx} className="flex px-3 hover:bg-white/[0.02]">
+              <span className="w-10 shrink-0 select-none pr-3 text-right text-[#52525B]">
+                {baseLine + idx}
+              </span>
+              <span className="whitespace-pre-wrap break-all text-[#E4E4E7]">
+                {line || ' '}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -58,7 +128,7 @@ export function ProofInspector({
   walletAddress,
   onVerifySingleTx,
 }: ProofInspectorProps) {
-  const [filter, setFilter] = useState<(typeof FILTER_OPTIONS)[number]>('ALL')
+  const [filter, setFilter] = useState<FilterValue>('ALL')
   const [viewMode, setViewMode] = useState<'split' | 'matrix'>('split')
   const [selectedCaseId, setSelectedCaseId] = useState<string>('')
   const [shaResults, setShaResults] = useState<
@@ -102,54 +172,59 @@ export function ProofInspector({
 
   if (proof.isPlaceholder || proof.cases.length === 0) {
     return (
-      <div className="rounded border border-[#1F293B] bg-[#11161F] p-8 text-center">
-        <FileCode2 className="mx-auto mb-3 h-7 w-7 text-[#F59E0B]" />
-        <h3 className="font-display text-base font-semibold text-[#F1F5F9]">
+      <div className="rounded-lg border border-white/[0.08] bg-[#0F0F12] p-10 text-center">
+        <FileCode2 className="mx-auto mb-3 h-6 w-6 text-[#71717A]" />
+        <h3 className="font-display text-base font-semibold text-[#FAFAFA]">
           Awaiting Finalized StudioNet Proof Bundle
         </h3>
-        <p className="mx-auto mt-1.5 max-w-xl text-xs text-[#94A3B8]">
-          <code className="font-mono text-[#FCD34D]">frontend/src/data/proof.json</code> is
+        <p className="mx-auto mt-1.5 max-w-xl text-xs leading-relaxed text-[#A1A1AA]">
+          <code className="font-mono text-[#FAFAFA]">frontend/src/data/proof.json</code> is
           currently in placeholder mode while the contract is deployed and seeded on
-          StudioNet. Use <span className="text-[#F1F5F9]">02 // INDEMNITY DESK</span> or{' '}
-          <span className="text-[#F1F5F9]">03 // CONSENSUS TELEMETRY</span> to inspect
-          live StudioNet state directly.
+          StudioNet. Use <span className="text-[#FAFAFA]">Indemnity Desk</span> or{' '}
+          <span className="text-[#FAFAFA]">Consensus Telemetry</span> to inspect live
+          StudioNet state directly.
         </p>
       </div>
     )
   }
 
+  const upstreamSlashed = activeCase?.slashed_party === activeCase?.upstream_id
+  const upstreamExonerated = activeCase?.exonerated_party === activeCase?.upstream_id
+  const downstreamSlashed = activeCase?.slashed_party === activeCase?.downstream_id
+  const downstreamExonerated = activeCase?.exonerated_party === activeCase?.downstream_id
+
   return (
     <div className="space-y-4">
-      {/* Filter & View Mode Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-[#1F293B] bg-[#11161F] px-3.5 py-2.5">
+      {/* Filter & View Mode Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           {FILTER_OPTIONS.map((opt) => {
-            const active = filter === opt
+            const active = filter === opt.value
             return (
               <button
-                key={opt}
+                key={opt.value}
                 type="button"
-                onClick={() => setFilter(opt)}
-                className={`rounded border px-2.5 py-1 font-mono text-[11px] transition ${
+                onClick={() => setFilter(opt.value)}
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
                   active
-                    ? 'border-[#D97706]/60 bg-[#451A03]/70 text-[#FCD34D]'
-                    : 'border-[#1F293B] bg-[#151C28] text-[#94A3B8] hover:text-[#F1F5F9]'
+                    ? 'border-white/[0.16] bg-[#16161B] text-[#FAFAFA]'
+                    : 'border-white/[0.06] bg-transparent text-[#A1A1AA] hover:border-white/[0.12] hover:text-[#FAFAFA]'
                 }`}
               >
-                {opt}
+                {opt.label}
               </button>
             )
           })}
         </div>
 
-        <div className="inline-flex rounded border border-[#1F293B] bg-[#0A0D12] p-0.5">
+        <div className="inline-flex rounded-md border border-white/[0.08] bg-[#0F0F12] p-0.5">
           <button
             type="button"
             onClick={() => setViewMode('split')}
-            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 font-mono text-[11px] transition ${
+            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition ${
               viewMode === 'split'
-                ? 'bg-[#151C28] text-[#F1F5F9]'
-                : 'text-[#94A3B8] hover:text-[#F1F5F9]'
+                ? 'bg-[#16161B] text-[#FAFAFA]'
+                : 'text-[#A1A1AA] hover:text-[#FAFAFA]'
             }`}
           >
             <Columns2 className="h-3.5 w-3.5" />
@@ -158,10 +233,10 @@ export function ProofInspector({
           <button
             type="button"
             onClick={() => setViewMode('matrix')}
-            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 font-mono text-[11px] transition ${
+            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition ${
               viewMode === 'matrix'
-                ? 'bg-[#151C28] text-[#F1F5F9]'
-                : 'text-[#94A3B8] hover:text-[#F1F5F9]'
+                ? 'bg-[#16161B] text-[#FAFAFA]'
+                : 'text-[#A1A1AA] hover:text-[#FAFAFA]'
             }`}
           >
             <LayoutList className="h-3.5 w-3.5" />
@@ -171,19 +246,19 @@ export function ProofInspector({
       </div>
 
       {viewMode === 'matrix' ? (
-        <div className="overflow-x-auto rounded border border-[#1F293B] bg-[#11161F]">
+        <div className="overflow-x-auto rounded-lg border border-white/[0.08] bg-[#0F0F12]">
           <table className="w-full border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-[#1F293B] bg-[#151C28] font-mono text-[11px] uppercase tracking-wider text-[#94A3B8]">
-                <th className="px-3.5 py-2.5">Exhibit</th>
-                <th className="px-3.5 py-2.5">Upstream → Downstream</th>
-                <th className="px-3.5 py-2.5">Verdict : Reason</th>
-                <th className="px-3.5 py-2.5">Slashed</th>
-                <th className="px-3.5 py-2.5">Lines</th>
-                <th className="px-3.5 py-2.5">RPC Parity</th>
+              <tr className="border-b border-white/[0.08] text-[11px] font-medium text-[#71717A]">
+                <th className="px-4 py-3">Exhibit</th>
+                <th className="px-4 py-3">Parties (Upstream → Downstream)</th>
+                <th className="px-4 py-3">Verdict</th>
+                <th className="px-4 py-3">Slashed Party</th>
+                <th className="px-4 py-3">Lines</th>
+                <th className="px-4 py-3">RPC Parity</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1F293B]">
+            <tbody className="divide-y divide-white/[0.06]">
               {filteredCases.map((c) => {
                 const live = c.tx_hash ? liveTxMap[c.tx_hash] : undefined
                 return (
@@ -193,31 +268,34 @@ export function ProofInspector({
                       setSelectedCaseId(c.case_id)
                       setViewMode('split')
                     }}
-                    className="cursor-pointer transition hover:bg-[#151C28]/80"
+                    className="cursor-pointer transition hover:bg-white/[0.02]"
                   >
-                    <td className="px-3.5 py-2.5 font-mono text-[#FCD34D]">
-                      {c.exhibit_code}
-                      <div className="font-sans text-[11px] text-[#94A3B8]">{c.label}</div>
+                    <td className="px-4 py-3">
+                      <div className="font-mono text-xs font-medium text-[#FAFAFA]">
+                        {c.exhibit_code}
+                      </div>
+                      <div className="mt-0.5 text-xs text-[#A1A1AA]">{c.label}</div>
                     </td>
-                    <td className="px-3.5 py-2.5 font-mono text-[11px] text-[#F1F5F9]">
+                    <td className="px-4 py-3 font-mono text-xs text-[#A1A1AA]">
                       {c.upstream_id} → {c.downstream_id}
                     </td>
-                    <td className="px-3.5 py-2.5">
+                    <td className="px-4 py-3">
                       <VerdictBadge verdict={c.verdict} reasonCode={c.reason_code} compact />
                     </td>
-                    <td className="px-3.5 py-2.5 font-mono text-[11px] text-[#FCA5A5]">
-                      {c.slashed_party || 'NONE'}
+                    <td className="px-4 py-3 font-mono text-xs text-[#FAFAFA]">
+                      {c.slashed_party || <span className="text-[#71717A]">None</span>}
                     </td>
-                    <td className="px-3.5 py-2.5 font-mono text-[11px] text-[#94A3B8]">
+                    <td className="px-4 py-3 font-mono text-xs text-[#A1A1AA]">
                       L{c.start_line}–L{c.end_line}
                     </td>
-                    <td className="px-3.5 py-2.5 font-mono text-[11px]">
+                    <td className="px-4 py-3 font-mono text-xs">
                       {live ? (
-                        <span className="text-[#6EE7B7]">
+                        <span className="inline-flex items-center gap-1.5 text-emerald-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                           {live.statusName} ({live.executionResultName})
                         </span>
                       ) : (
-                        <span className="text-[#94A3B8]">UNCHECKED</span>
+                        <span className="text-[#71717A]">Unchecked</span>
                       )}
                     </td>
                   </tr>
@@ -227,155 +305,180 @@ export function ProofInspector({
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-          {/* Left Docket Rail */}
-          <div className="space-y-2 lg:col-span-4">
+        <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-white/[0.08] bg-[#0F0F12] lg:grid-cols-12">
+          {/* Left Rail: Incident List */}
+          <div className="divide-y divide-white/[0.06] border-b border-white/[0.08] lg:col-span-4 lg:border-b-0 lg:border-r">
             {filteredCases.map((c) => {
               const selected = activeCase?.case_id === c.case_id
               const live = c.tx_hash ? liveTxMap[c.tx_hash] : undefined
+              const dotColor = getVerdictDotClass(c.verdict)
               return (
                 <button
                   key={c.case_id}
                   type="button"
                   onClick={() => setSelectedCaseId(c.case_id)}
-                  className={`w-full rounded border p-3 text-left transition ${
+                  className={`w-full border-l-2 px-4 py-3.5 text-left transition ${
                     selected
-                      ? 'border-[#D97706]/70 bg-[#151C28]'
-                      : 'border-[#1F293B] bg-[#11161F] hover:border-[#334155]'
+                      ? 'border-l-[#FAFAFA] bg-[#16161B]'
+                      : 'border-l-transparent bg-transparent hover:bg-white/[0.02]'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-semibold text-[#FCD34D]">
+                    <span className="inline-flex items-center gap-2 font-mono text-xs font-medium text-[#FAFAFA]">
+                      <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
                       {c.exhibit_code}
                     </span>
-                    <VerdictBadge verdict={c.verdict} compact />
-                  </div>
-                  <div className="mt-1.5 font-display text-sm font-medium text-[#F1F5F9]">
-                    {c.label}
-                  </div>
-                  <div className="mt-1 flex items-center justify-between font-mono text-[10px] text-[#94A3B8]">
-                    <span>
-                      {c.upstream_id} → {c.downstream_id}
+                    <span className="font-mono text-[11px] text-[#71717A]">
+                      {live ? live.statusName : c.finality_status}
                     </span>
-                    <span>{live ? live.statusName : c.finality_status}</span>
+                  </div>
+                  <div className="mt-1 text-sm font-medium text-[#FAFAFA]">{c.label}</div>
+                  <div className="mt-1 truncate font-mono text-[11px] text-[#71717A]">
+                    {c.upstream_id} → {c.downstream_id}
                   </div>
                 </button>
               )
             })}
           </div>
 
-          {/* Right Active Dossier */}
+          {/* Right Detail Pane */}
           {activeCase && (
-            <div className="space-y-4 lg:col-span-8">
-              {/* Header + Bilateral Fault Topology Strip */}
-              <div className="rounded border border-[#1F293B] bg-[#11161F] p-4 space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 font-mono text-[11px] text-[#94A3B8]">
-                      <span className="text-[#FCD34D]">{activeCase.exhibit_code}</span>
-                      <span>·</span>
-                      <span>POOL {activeCase.pool_id || 'N/A'}</span>
-                      {activeCase.audit_id && (
-                        <>
-                          <span>·</span>
-                          <span>AUDIT {activeCase.audit_id}</span>
-                        </>
-                      )}
-                    </div>
-                    <h2 className="mt-1 font-display text-lg font-semibold text-[#F1F5F9]">
-                      {activeCase.label}
-                    </h2>
+            <div className="divide-y divide-white/[0.08] lg:col-span-8">
+              {/* Verdict Summary Header */}
+              <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+                <div>
+                  <div className="flex items-center gap-2 font-mono text-xs text-[#71717A]">
+                    <span className="text-[#FAFAFA]">{activeCase.exhibit_code}</span>
+                    <span>·</span>
+                    <span>Pool {activeCase.pool_id || 'N/A'}</span>
+                    {activeCase.audit_id && (
+                      <>
+                        <span>·</span>
+                        <span>Audit {activeCase.audit_id}</span>
+                      </>
+                    )}
                   </div>
-                  <VerdictBadge
-                    verdict={activeCase.verdict}
-                    reasonCode={activeCase.reason_code}
-                  />
+                  <h2 className="mt-1 font-display text-lg font-semibold tracking-tight text-[#FAFAFA]">
+                    {activeCase.label}
+                  </h2>
+                </div>
+                <VerdictBadge
+                  verdict={activeCase.verdict}
+                  reasonCode={activeCase.reason_code}
+                />
+              </div>
+
+              {/* Bilateral 80/20 Attribution & Escrow Breakdown */}
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-[#A1A1AA]">
+                    Bilateral Attribution &amp; Escrow Breakdown
+                  </h3>
+                  <span className="font-mono text-[11px] text-[#71717A]">
+                    Indemnity {formatWeiShort(activeCase.indemnity_wei)} GEN · Bond{' '}
+                    {formatWeiShort(activeCase.bond_wei)} GEN
+                  </span>
                 </div>
 
-                {/* Bilateral Fault Topology Strip */}
-                <div className="grid grid-cols-1 items-center gap-2 rounded border border-[#1F293B] bg-[#0A0D12] p-3 md:grid-cols-5">
-                  <div
-                    className={`rounded border p-2.5 md:col-span-2 ${
-                      activeCase.slashed_party === activeCase.upstream_id
-                        ? 'border-[#DC2626]/60 bg-[#450A0A]/40'
-                        : activeCase.exonerated_party === activeCase.upstream_id
-                          ? 'border-[#059669]/50 bg-[#064E3B]/30'
-                          : 'border-[#1F293B] bg-[#11161F]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-[#94A3B8]">
-                      <span>Upstream Node</span>
-                      {activeCase.slashed_party === activeCase.upstream_id ? (
-                        <span className="inline-flex items-center gap-1 text-[#FCA5A5]">
-                          <ShieldX className="h-3 w-3" /> SLASHED
-                        </span>
-                      ) : activeCase.exonerated_party === activeCase.upstream_id ? (
-                        <span className="inline-flex items-center gap-1 text-[#6EE7B7]">
-                          <ShieldCheck className="h-3 w-3" /> EXONERATED
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-1 font-mono text-xs font-semibold text-[#F1F5F9]">
-                      {activeCase.upstream_id}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <ArrowRight className="h-4 w-4 text-[#F59E0B]" />
-                    <span className="mt-0.5 font-mono text-[10px] text-[#94A3B8]">
-                      CHARTER
-                    </span>
-                  </div>
-
-                  <div
-                    className={`rounded border p-2.5 md:col-span-2 ${
-                      activeCase.slashed_party === activeCase.downstream_id
-                        ? 'border-[#DC2626]/60 bg-[#450A0A]/40'
-                        : activeCase.exonerated_party === activeCase.downstream_id
-                          ? 'border-[#059669]/50 bg-[#064E3B]/30'
-                          : 'border-[#1F293B] bg-[#11161F]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-[#94A3B8]">
-                      <span>Downstream Node</span>
-                      {activeCase.slashed_party === activeCase.downstream_id ? (
-                        <span className="inline-flex items-center gap-1 text-[#FCA5A5]">
-                          <ShieldX className="h-3 w-3" /> SLASHED
-                        </span>
-                      ) : activeCase.exonerated_party === activeCase.downstream_id ? (
-                        <span className="inline-flex items-center gap-1 text-[#6EE7B7]">
-                          <ShieldCheck className="h-3 w-3" /> EXONERATED
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-1 font-mono text-xs font-semibold text-[#F1F5F9]">
-                      {activeCase.downstream_id}
-                    </div>
-                  </div>
+                <div className="overflow-hidden rounded-md border border-white/[0.08]">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-white/[0.08] bg-[#16161B]/60 text-[11px] font-medium text-[#71717A]">
+                        <th className="px-3.5 py-2">Role</th>
+                        <th className="px-3.5 py-2">Service Identifier</th>
+                        <th className="px-3.5 py-2">Attribution</th>
+                        <th className="px-3.5 py-2 text-right">80/20 Escrow Split</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.06] bg-[#09090B]">
+                      <tr>
+                        <td className="px-3.5 py-2.5 text-[#A1A1AA]">Upstream</td>
+                        <td className="px-3.5 py-2.5 font-mono text-[#FAFAFA]">
+                          {activeCase.upstream_id}
+                        </td>
+                        <td className="px-3.5 py-2.5">
+                          {upstreamSlashed ? (
+                            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-red-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                              Slashed
+                            </span>
+                          ) : upstreamExonerated ? (
+                            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-emerald-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              Exonerated
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[11px] text-[#71717A]">
+                              Unattributed
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-right font-mono text-[#A1A1AA]">
+                          {upstreamSlashed
+                            ? '0% (Forfeited)'
+                            : upstreamExonerated
+                              ? '80% Indemnity / Bond Return'
+                              : 'Refundable'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-3.5 py-2.5 text-[#A1A1AA]">Downstream</td>
+                        <td className="px-3.5 py-2.5 font-mono text-[#FAFAFA]">
+                          {activeCase.downstream_id}
+                        </td>
+                        <td className="px-3.5 py-2.5">
+                          {downstreamSlashed ? (
+                            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-red-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                              Slashed
+                            </span>
+                          ) : downstreamExonerated ? (
+                            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-emerald-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              Exonerated
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[11px] text-[#71717A]">
+                              Unattributed
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-right font-mono text-[#A1A1AA]">
+                          {downstreamSlashed
+                            ? '20% Bond Slashed'
+                            : downstreamExonerated
+                              ? '80% Indemnity Payout'
+                              : 'Refundable'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
                 {/* Fault Charter */}
-                <div className="rounded border border-[#1F293B] bg-[#151C28] p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-wider text-[#94A3B8]">
-                    <span>Fault Charter</span>
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="font-medium text-[#A1A1AA]">Fault Charter</span>
                     {activeCase.charter_sha256 && (
-                      <span>SHA-256: {activeCase.charter_sha256.slice(0, 16)}…</span>
+                      <span className="font-mono text-[11px] text-[#71717A]">
+                        SHA-256 {activeCase.charter_sha256.slice(0, 16)}…
+                      </span>
                     )}
                   </div>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#F1F5F9]">
+                  <p className="text-xs leading-relaxed text-[#E4E4E7]">
                     {activeCase.charter || 'No charter text recorded.'}
                   </p>
                 </div>
               </div>
 
-              {/* Telemetry Log Plate + Live Browser SHA-256 Verification */}
-              <div className="rounded border border-[#1F293B] bg-[#11161F] p-4 space-y-3">
+              {/* Commit-Pinned Evidence Viewer */}
+              <div className="p-5 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[#F1F5F9]">
-                      Telemetry Log Plate
-                    </span>
-                    <span className="rounded border border-[#1F293B] bg-[#151C28] px-2 py-0.5 font-mono text-[11px] text-[#FCD34D]">
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-xs font-medium text-[#FAFAFA]">
+                      Commit-Pinned Evidence
+                    </h3>
+                    <span className="rounded border border-white/[0.08] bg-[#16161B] px-2 py-0.5 font-mono text-[11px] text-[#A1A1AA]">
                       L{activeCase.start_line}–L{activeCase.end_line}
                     </span>
                   </div>
@@ -384,75 +487,74 @@ export function ProofInspector({
                     type="button"
                     onClick={() => void handleVerifySha256(activeCase)}
                     disabled={!activeCase.snippet_excerpt}
-                    className="inline-flex items-center gap-1.5 rounded border border-[#059669]/50 bg-[#064E3B]/50 px-2.5 py-1 font-mono text-[11px] font-medium text-[#6EE7B7] transition hover:bg-[#064E3B] disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.12] bg-[#16161B] px-2.5 py-1 text-xs font-medium text-[#FAFAFA] transition hover:border-white/[0.2] disabled:opacity-40"
                   >
-                    <Fingerprint className="h-3.5 w-3.5" />
+                    <Fingerprint className="h-3.5 w-3.5 text-[#A1A1AA]" />
                     Verify SHA-256 in Browser
                   </button>
                 </div>
 
                 {activeCase.evidence_url && (
-                  <div className="truncate font-mono text-[11px] text-[#94A3B8]">
+                  <div className="truncate font-mono text-[11px] text-[#71717A]">
                     Source:{' '}
                     <a
                       href={activeCase.evidence_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[#FCD34D] hover:underline"
+                      className="text-[#A1A1AA] underline decoration-white/20 underline-offset-2 hover:text-[#FAFAFA]"
                     >
                       {activeCase.evidence_url}
                     </a>
                   </div>
                 )}
 
-                <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded border border-[#1F293B] bg-[#0A0D12] p-3 font-mono text-xs leading-relaxed text-[#E2E8F0]">
-                  {renderHighlightedExcerpt(
-                    activeCase.snippet_excerpt,
-                    activeCase.evidence_quote
-                  )}
-                </pre>
+                <EvidenceCodeViewer
+                  excerpt={activeCase.snippet_excerpt}
+                  quote={activeCase.evidence_quote}
+                  startLine={activeCase.start_line}
+                />
 
                 <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
-                  <span className="text-[#94A3B8]">
-                    On-Chain Snippet SHA-256:{' '}
-                    <span className="text-[#F1F5F9]">
+                  <span className="truncate text-[#71717A]">
+                    On-chain SHA-256:{' '}
+                    <span className="text-[#A1A1AA]">
                       {activeCase.snippet_sha256 || 'N/A'}
                     </span>
                   </span>
                   {shaResults[activeCase.case_id] && (
                     <span
-                      className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${
+                      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 ${
                         shaResults[activeCase.case_id].matches
-                          ? 'border-[#059669]/50 bg-[#064E3B]/50 text-[#6EE7B7]'
-                          : 'border-[#D97706]/50 bg-[#451A03]/60 text-[#FCD34D]'
+                          ? 'border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-300'
+                          : 'border-amber-500/25 bg-amber-500/[0.08] text-amber-300'
                       }`}
                     >
                       <CheckCircle2 className="h-3 w-3" />
                       {shaResults[activeCase.case_id].matches
-                        ? 'BROWSER SHA-256 MATCH'
-                        : `COMPUTED ${shaResults[activeCase.case_id].computed.slice(0, 12)}…`}
+                        ? 'SHA-256 Verified'
+                        : `Computed ${shaResults[activeCase.case_id].computed.slice(0, 12)}…`}
                     </span>
                   )}
                 </div>
               </div>
 
               {/* Recorded Proof vs Live StudioNet RPC Parity */}
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded border border-[#1F293B] bg-[#11161F] p-3.5 space-y-1.5">
-                  <div className="font-mono text-[10px] uppercase tracking-wider text-[#94A3B8]">
-                    Recorded Proof (deploy/proof.json)
+              <div className="grid grid-cols-1 divide-y divide-white/[0.08] md:grid-cols-2 md:divide-x md:divide-y-0">
+                <div className="p-5 space-y-1.5">
+                  <div className="text-xs font-medium text-[#71717A]">
+                    Recorded Proof
                   </div>
-                  <div className="font-mono text-xs text-[#F1F5F9]">
-                    Status: {activeCase.finality_status} · {activeCase.execution_result}
+                  <div className="font-mono text-xs text-[#FAFAFA]">
+                    {activeCase.finality_status} · {activeCase.execution_result}
                   </div>
                   {activeCase.tx_hash && (
-                    <div className="flex items-center gap-2 font-mono text-[11px] text-[#94A3B8]">
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-[#71717A]">
                       <span className="truncate">{activeCase.tx_hash}</span>
                       <a
                         href={activeCase.explorer_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex shrink-0 items-center gap-1 text-[#FCD34D] hover:underline"
+                        className="inline-flex shrink-0 items-center gap-1 text-[#A1A1AA] hover:text-[#FAFAFA]"
                       >
                         Tx <ExternalLink className="h-3 w-3" />
                       </a>
@@ -460,41 +562,44 @@ export function ProofInspector({
                   )}
                 </div>
 
-                <div className="rounded border border-[#1F293B] bg-[#11161F] p-3.5 space-y-1.5">
+                <div className="p-5 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-[#94A3B8]">
+                    <span className="text-xs font-medium text-[#71717A]">
                       Live StudioNet RPC Parity
                     </span>
                     {activeCase.tx_hash && onVerifySingleTx && (
                       <button
                         type="button"
                         onClick={() => onVerifySingleTx(activeCase.tx_hash)}
-                        className="font-mono text-[10px] text-[#FCD34D] hover:underline"
+                        className="text-[11px] font-medium text-[#A1A1AA] hover:text-[#FAFAFA]"
                       >
                         Refresh Tx
                       </button>
                     )}
                   </div>
                   {activeCase.tx_hash && liveTxMap[activeCase.tx_hash] ? (
-                    <div className="font-mono text-xs text-[#6EE7B7]">
+                    <div className="inline-flex items-center gap-1.5 font-mono text-xs text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                       {liveTxMap[activeCase.tx_hash].statusName} ·{' '}
                       {liveTxMap[activeCase.tx_hash].executionResultName}
                     </div>
                   ) : (
-                    <div className="font-mono text-xs text-[#94A3B8]">
-                      Click &ldquo;Verify Live StudioNet&rdquo; in header to confirm RPC
-                      parity.
+                    <div className="text-xs text-[#71717A]">
+                      Click &ldquo;Verify Live StudioNet&rdquo; in the header to confirm
+                      RPC parity.
                     </div>
                   )}
                 </div>
               </div>
 
               {activeCase.tx_hash && (
-                <AppealWindowPanel
-                  txHash={activeCase.tx_hash}
-                  liveStatus={liveTxMap[activeCase.tx_hash]}
-                  walletAddress={walletAddress}
-                />
+                <div className="p-5">
+                  <AppealWindowPanel
+                    txHash={activeCase.tx_hash}
+                    liveStatus={liveTxMap[activeCase.tx_hash]}
+                    walletAddress={walletAddress}
+                  />
+                </div>
               )}
             </div>
           )}

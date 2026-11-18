@@ -89,150 +89,175 @@ export function App() {
 
   const shortContract = effectiveContract
     ? `${effectiveContract.slice(0, 6)}…${effectiveContract.slice(-4)}`
-    : 'UNDEPLOYED'
+    : 'Undeployed'
+
+  const rpcDotColor =
+    rpcState === 'synced'
+      ? 'bg-emerald-400'
+      : rpcState === 'verifying'
+        ? 'bg-amber-400'
+        : rpcState === 'error'
+          ? 'bg-red-400'
+          : 'bg-[#71717A]'
+
+  const rpcLabel =
+    rpcState === 'verifying'
+      ? 'Syncing'
+      : rpcState === 'synced'
+        ? 'Live'
+        : rpcState === 'error'
+          ? 'RPC Error'
+          : proof.isPlaceholder
+            ? 'Placeholder'
+            : 'Ready'
 
   return (
-    <div className="min-h-screen bg-[#0A0D12] text-[#F1F5F9]">
-      {/* Industrial Flight-Recorder Header & Telemetry Bar */}
-      <header className="border-b border-[#1F293B] bg-[#11161F]">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo.png"
-                alt="Cascade Emblem"
-                className="h-9 w-9 rounded border border-[#1F293B] bg-[#0A0D12] object-contain p-0.5"
-              />
-              <div>
-                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-[#FCD34D]">
-                  <span>CASCADE // STUDIONET 61999</span>
-                  <span className="text-[#475569]">|</span>
-                  <span
-                    className={`inline-flex items-center gap-1.5 ${
-                      rpcState === 'synced'
-                        ? 'text-[#6EE7B7]'
-                        : rpcState === 'verifying'
-                          ? 'text-[#FCD34D]'
-                          : rpcState === 'error'
-                            ? 'text-[#FCA5A5]'
-                            : 'text-[#94A3B8]'
-                    }`}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                    {rpcState === 'verifying'
-                      ? 'VERIFYING RPC'
-                      : rpcState === 'synced'
-                        ? 'LIVE SYNCED'
-                        : rpcState === 'error'
-                          ? 'RPC ERROR'
-                          : proof.isPlaceholder
-                            ? 'PLACEHOLDER MODE'
-                            : 'READY'}
-                  </span>
-                </div>
-                <h1 className="font-display text-base font-bold tracking-tight text-[#F1F5F9] sm:text-lg">
-                  Bilateral AI-Service Indemnity &amp; Fault-Attribution Console
-                </h1>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {effectiveContract ? (
-                <a
-                  href={`${STUDIONET_EXPLORER_BASE}/address/${effectiveContract}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#94A3B8] hover:border-[#334155] hover:text-[#F1F5F9]"
-                >
-                  Contract {shortContract}
-                  <ExternalLink className="h-3 w-3 text-[#FCD34D]" />
-                </a>
-              ) : (
-                <input
-                  type="text"
-                  value={contractOverride}
-                  onChange={(e) => setContractOverride(e.target.value)}
-                  placeholder="Optional 0x contract address..."
-                  className="w-56 rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9] placeholder-[#475569]"
-                />
-              )}
-
-              <button
-                type="button"
-                onClick={() => void handleVerifyLive()}
-                disabled={!effectiveContract || rpcState === 'verifying'}
-                className="inline-flex items-center gap-1.5 rounded border border-[#D97706]/50 bg-[#451A03]/60 px-3 py-1.5 font-mono text-xs font-medium text-[#FCD34D] transition hover:bg-[#451A03] disabled:opacity-40"
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 ${rpcState === 'verifying' ? 'animate-spin' : ''}`}
-                />
-                Verify Live StudioNet
-              </button>
+    <div className="min-h-screen bg-[#09090B] text-[#FAFAFA]">
+      {/* Single-Row Top Navigation Bar */}
+      <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#09090B]/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          {/* Brand & Network */}
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="Cascade"
+              className="h-7 w-7 rounded-md border border-white/[0.08] bg-[#16161B] object-contain p-0.5"
+            />
+            <div className="flex items-center gap-2.5">
+              <span className="font-display text-sm font-semibold tracking-tight text-[#FAFAFA]">
+                Cascade
+              </span>
+              <span className="h-3.5 w-px bg-white/[0.12]" />
+              <span className="inline-flex items-center gap-1.5 text-xs text-[#A1A1AA]">
+                <span className={`h-1.5 w-1.5 rounded-full ${rpcDotColor}`} />
+                <span>StudioNet · 61999</span>
+                <span className="hidden text-[#71717A] sm:inline">({rpcLabel})</span>
+              </span>
             </div>
           </div>
 
-          {/* Telemetry Counters + 3 Crisp Tabs */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[#1F293B] pt-3">
-            <nav className="flex flex-wrap items-center gap-1.5">
-              {(
-                [
-                  { id: 'dossiers', label: '01 // INCIDENT DOSSIERS' },
-                  { id: 'desk', label: '02 // INDEMNITY DESK' },
-                  { id: 'telemetry', label: '03 // CONSENSUS TELEMETRY' },
-                ] as const
-              ).map((tab) => (
+          {/* Segmented Tab Switcher */}
+          <nav
+            aria-label="Primary"
+            className="order-3 flex w-full items-center gap-1 rounded-lg border border-white/[0.08] bg-[#0F0F12] p-0.5 lg:order-2 lg:w-auto"
+          >
+            {(
+              [
+                { id: 'dossiers', label: 'Incident Dossiers' },
+                { id: 'desk', label: 'Indemnity Desk' },
+                { id: 'telemetry', label: 'Consensus Telemetry' },
+              ] as const
+            ).map((tab) => {
+              const active = activeTab === tab.id
+              return (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`rounded border px-3 py-1.5 font-mono text-xs font-medium transition ${
-                    activeTab === tab.id
-                      ? 'border-[#D97706]/60 bg-[#151C28] text-[#FCD34D]'
-                      : 'border-transparent bg-transparent text-[#94A3B8] hover:border-[#1F293B] hover:text-[#F1F5F9]'
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition lg:flex-initial ${
+                    active
+                      ? 'bg-[#16161B] text-[#FAFAFA] shadow-xs ring-1 ring-white/[0.08]'
+                      : 'text-[#A1A1AA] hover:text-[#FAFAFA]'
                   }`}
                 >
                   {tab.label}
                 </button>
-              ))}
-            </nav>
+              )
+            })}
+          </nav>
 
-            <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-[#94A3B8]">
-              <span>
-                Exhibits:{' '}
-                <strong className="text-[#F1F5F9]">{proof.stats.totalCases}</strong>
+          {/* Contract & RPC Action */}
+          <div className="order-2 flex items-center gap-2 lg:order-3">
+            {effectiveContract ? (
+              <a
+                href={`${STUDIONET_EXPLORER_BASE}/address/${effectiveContract}`}
+                target="_blank"
+                rel="noreferrer"
+                title={effectiveContract}
+                className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-[#0F0F12] px-2.5 py-1.5 font-mono text-xs text-[#A1A1AA] transition hover:border-white/[0.14] hover:text-[#FAFAFA]"
+              >
+                <span>{shortContract}</span>
+                <ExternalLink className="h-3 w-3 text-[#71717A]" />
+              </a>
+            ) : (
+              <input
+                type="text"
+                value={contractOverride}
+                onChange={(e) => setContractOverride(e.target.value)}
+                placeholder="0x contract address..."
+                className="w-44 rounded-md border border-white/[0.08] bg-[#0F0F12] px-2.5 py-1.5 font-mono text-xs text-[#FAFAFA] placeholder-[#71717A] focus:border-white/25 focus:outline-none"
+              />
+            )}
+
+            <button
+              type="button"
+              onClick={() => void handleVerifyLive()}
+              disabled={!effectiveContract || rpcState === 'verifying'}
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.12] bg-[#16161B] px-3 py-1.5 text-xs font-medium text-[#FAFAFA] transition hover:border-white/[0.2] hover:bg-[#1E1E24] disabled:opacity-40"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 text-[#A1A1AA] ${rpcState === 'verifying' ? 'animate-spin' : ''}`}
+              />
+              <span>Verify Live StudioNet</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Sub-header Protocol Summary Strip */}
+        <div className="border-t border-white/[0.06] bg-[#0F0F12]/60">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 text-xs sm:px-6">
+            <span className="text-[#71717A]">
+              Bilateral AI-Service Indemnity &amp; Fault-Attribution Protocol
+            </span>
+
+            <div className="flex flex-wrap items-center gap-4 text-[#A1A1AA]">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-[#71717A]">Exhibits</span>
+                <span className="font-mono font-medium text-[#FAFAFA]">
+                  {proof.stats.totalCases}
+                </span>
               </span>
-              <span>
-                Pools:{' '}
-                <strong className="text-[#F1F5F9]">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-[#71717A]">Pools</span>
+                <span className="font-mono font-medium text-[#FAFAFA]">
                   {liveStats?.total_pools ?? proof.stats.totalCases}
-                </strong>
+                </span>
               </span>
-              <span className="text-[#FCD34D]">
-                Upstream Fault:{' '}
-                {liveStats?.upstream_at_fault ?? proof.stats.upstreamFaultCount}
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span className="text-[#71717A]">Upstream Fault</span>
+                <span className="font-mono font-medium text-[#FAFAFA]">
+                  {liveStats?.upstream_at_fault ?? proof.stats.upstreamFaultCount}
+                </span>
               </span>
-              <span className="text-[#FCA5A5]">
-                Downstream Fault:{' '}
-                {liveStats?.downstream_at_fault ?? proof.stats.downstreamFaultCount}
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                <span className="text-[#71717A]">Downstream Fault</span>
+                <span className="font-mono font-medium text-[#FAFAFA]">
+                  {liveStats?.downstream_at_fault ?? proof.stats.downstreamFaultCount}
+                </span>
               </span>
-              <span className="text-[#D8B4FE]">
-                Insufficient/Vague:{' '}
-                {(liveStats?.insufficient_trace ?? proof.stats.insufficientTraceCount) +
-                  (liveStats?.too_vague ?? proof.stats.tooVagueCount)}
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+                <span className="text-[#71717A]">Insufficient / Vague</span>
+                <span className="font-mono font-medium text-[#FAFAFA]">
+                  {(liveStats?.insufficient_trace ?? proof.stats.insufficientTraceCount) +
+                    (liveStats?.too_vague ?? proof.stats.tooVagueCount)}
+                </span>
               </span>
             </div>
           </div>
-
-          {rpcError && (
-            <div className="mt-2 rounded border border-[#DC2626]/50 bg-[#450A0A]/40 px-3 py-1.5 font-mono text-xs text-[#FCA5A5]">
-              {rpcError}
-            </div>
-          )}
         </div>
+
+        {rpcError && (
+          <div className="border-t border-red-500/20 bg-red-500/[0.08] px-4 py-2 text-xs text-red-300 sm:px-6">
+            <div className="mx-auto max-w-7xl font-mono">{rpcError}</div>
+          </div>
+        )}
       </header>
 
       {/* Main Workspace */}
-      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         {activeTab === 'dossiers' && (
           <ProofInspector
             proof={proof}

@@ -115,6 +115,11 @@ interface LiveWalletConsoleProps {
   onTxSubmitted?: (txHash: string, label: string, action: string) => void
 }
 
+const inputClass =
+  'w-full rounded-md border border-white/[0.08] bg-[#09090B] px-3 py-2 font-mono text-xs text-[#FAFAFA] placeholder-[#52525B] transition focus:border-white/25 focus:outline-none'
+
+const labelClass = 'mb-1.5 block text-xs font-medium text-[#A1A1AA]'
+
 export function LiveWalletConsole({
   contractAddress,
   walletAddress,
@@ -129,6 +134,8 @@ export function LiveWalletConsole({
   const [refundableWei, setRefundableWei] = useState('0')
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [selectedPresetId, setSelectedPresetId] = useState(INCIDENT_PRESETS[0].id)
+  const [stateTab, setStateTab] = useState<'pools' | 'audits' | 'rejected'>('pools')
 
   // Pool form state
   const [title, setTitle] = useState(INCIDENT_PRESETS[0].title)
@@ -202,6 +209,7 @@ export function LiveWalletConsole({
   }
 
   function applyPreset(preset: IncidentPreset) {
+    setSelectedPresetId(preset.id)
     setTitle(preset.title)
     setUpstreamId(preset.upstreamId)
     setDownstreamId(preset.downstreamId)
@@ -333,15 +341,15 @@ export function LiveWalletConsole({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Wallet & Escrow Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-[#1F293B] bg-[#11161F] p-4">
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="space-y-5">
+      {/* Wallet & Escrow Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-[#0F0F12] px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
             onClick={() => void handleConnectWallet()}
             disabled={connecting}
-            className="inline-flex items-center gap-2 rounded border border-[#D97706]/50 bg-[#451A03]/60 px-3.5 py-1.5 font-mono text-xs font-medium text-[#FCD34D] transition hover:bg-[#451A03] disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-[#FAFAFA] px-3.5 py-1.5 text-xs font-medium text-[#09090B] transition hover:bg-white/90 disabled:opacity-50"
           >
             <Wallet className="h-3.5 w-3.5" />
             {walletAddress
@@ -355,17 +363,17 @@ export function LiveWalletConsole({
             type="button"
             onClick={() => void refreshOnChainTables()}
             disabled={loadingState || !contractAddress}
-            className="inline-flex items-center gap-1.5 rounded border border-[#1F293B] bg-[#151C28] px-3 py-1.5 font-mono text-xs text-[#F1F5F9] hover:border-[#334155] disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.12] bg-[#16161B] px-3 py-1.5 text-xs font-medium text-[#FAFAFA] transition hover:border-white/[0.2] disabled:opacity-40"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loadingState ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 text-[#A1A1AA] ${loadingState ? 'animate-spin' : ''}`} />
             Sync On-Chain Tables
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="rounded border border-[#1F293B] bg-[#0A0D12] px-3 py-1.5 font-mono text-xs">
-            <span className="text-[#94A3B8]">Refundable Escrow: </span>
-            <span className="font-semibold text-[#6EE7B7]">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-md border border-white/[0.08] bg-[#09090B] px-3 py-1.5 text-xs">
+            <span className="text-[#71717A]">Refundable Escrow</span>
+            <span className="font-mono font-medium text-emerald-300">
               {formatWeiToGen(refundableWei)} GEN
             </span>
           </div>
@@ -373,7 +381,7 @@ export function LiveWalletConsole({
             type="button"
             onClick={() => void handleWithdrawEscrow()}
             disabled={!walletAddress || refundableWei === '0'}
-            className="inline-flex items-center gap-1.5 rounded border border-[#059669]/50 bg-[#064E3B]/50 px-3 py-1.5 font-mono text-xs font-medium text-[#6EE7B7] transition hover:bg-[#064E3B] disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-1.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/[0.14] disabled:opacity-40"
           >
             <ArrowDownToLine className="h-3.5 w-3.5" />
             Withdraw Escrow
@@ -381,242 +389,253 @@ export function LiveWalletConsole({
         </div>
       </div>
 
-      {/* Presets Strip */}
-      <div className="flex flex-wrap items-center gap-2 rounded border border-[#1F293B] bg-[#11161F] px-4 py-2.5">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-[#94A3B8]">
-          1-Click Incident Presets:
-        </span>
-        {INCIDENT_PRESETS.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            onClick={() => applyPreset(preset)}
-            className="rounded border border-[#1F293B] bg-[#151C28] px-2.5 py-1 font-mono text-[11px] text-[#FCD34D] transition hover:border-[#D97706]/50"
-          >
-            {preset.label}
-          </button>
-        ))}
+      {/* Incident Presets Selector */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-[#71717A]">Incident Presets</span>
+        {INCIDENT_PRESETS.map((preset) => {
+          const active = selectedPresetId === preset.id
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => applyPreset(preset)}
+              className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                active
+                  ? 'border-white/[0.16] bg-[#16161B] text-[#FAFAFA]'
+                  : 'border-white/[0.06] bg-[#0F0F12] text-[#A1A1AA] hover:border-white/[0.12] hover:text-[#FAFAFA]'
+              }`}
+            >
+              {preset.label}
+            </button>
+          )
+        })}
       </div>
 
       {errorMessage && (
-        <div className="flex items-center gap-2 rounded border border-[#DC2626]/50 bg-[#450A0A]/50 px-3.5 py-2 text-xs text-[#FCA5A5]">
+        <div className="flex items-center gap-2 rounded-md border border-red-500/25 bg-red-500/[0.08] px-3.5 py-2.5 text-xs text-red-300">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
       {statusMessage && (
-        <div className="flex items-center gap-2 rounded border border-[#059669]/50 bg-[#064E3B]/40 px-3.5 py-2 font-mono text-xs text-[#6EE7B7]">
+        <div className="flex items-center gap-2 rounded-md border border-emerald-500/25 bg-emerald-500/[0.08] px-3.5 py-2.5 font-mono text-xs text-emerald-300">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>{statusMessage}</span>
         </div>
       )}
 
-      {/* Action Forms */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Open Indemnity Pool */}
-        <form
-          onSubmit={(e) => void handleOpenPool(e)}
-          className="rounded border border-[#1F293B] bg-[#11161F] p-4 space-y-3"
-        >
-          <div className="flex items-center gap-2 font-display text-sm font-semibold text-[#F1F5F9]">
-            <ShieldPlus className="h-4 w-4 text-[#F59E0B]" />
-            open_indemnity_pool
-          </div>
-
-          <div>
-            <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-              Incident Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                Upstream ID
-              </label>
-              <input
-                type="text"
-                value={upstreamId}
-                onChange={(e) => setUpstreamId(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                Downstream ID
-              </label>
-              <input
-                type="text"
-                value={downstreamId}
-                onChange={(e) => setDownstreamId(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                Upstream Beneficiary (0x...)
-              </label>
-              <input
-                type="text"
-                value={upstreamBeneficiary}
-                onChange={(e) => setUpstreamBeneficiary(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                Downstream Beneficiary (0x...)
-              </label>
-              <input
-                type="text"
-                value={downstreamBeneficiary}
-                onChange={(e) => setDownstreamBeneficiary(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-              Fault Charter
-            </label>
-            <textarea
-              rows={2}
-              value={charter}
-              onChange={(e) => setCharter(e.target.value)}
-              className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 text-xs text-[#F1F5F9]"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-              Allowed Source Prefix (40-hex SHA pinned)
-            </label>
-            <input
-              type="text"
-              value={allowedPrefix}
-              onChange={(e) => setAllowedPrefix(e.target.value)}
-              className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                Indemnity Escrow (GEN)
-              </label>
-              <input
-                type="text"
-                value={indemnityGen}
-                onChange={(e) => setIndemnityGen(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                TTL (Seconds)
-              </label>
-              <input
-                type="number"
-                value={ttlSeconds}
-                onChange={(e) => setTtlSeconds(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="inline-flex items-center gap-1.5 rounded border border-[#D97706]/50 bg-[#451A03]/60 px-3.5 py-1.5 font-mono text-xs font-medium text-[#FCD34D] hover:bg-[#451A03]"
+      {/* 2-Column Stripe-like Workbench */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        {/* Left Column: Open Pool + Expire Pool */}
+        <div className="space-y-5 lg:col-span-6">
+          <form
+            onSubmit={(e) => void handleOpenPool(e)}
+            className="rounded-lg border border-white/[0.08] bg-[#0F0F12] p-5 space-y-4"
           >
-            <Coins className="h-3.5 w-3.5" />
-            Fund & Open Pool
-          </button>
-        </form>
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldPlus className="h-4 w-4 text-[#A1A1AA]" />
+                <span className="font-mono text-xs font-medium text-[#FAFAFA]">
+                  open_indemnity_pool
+                </span>
+              </div>
+              <span className="text-[11px] text-[#71717A]">Bilateral Escrow</span>
+            </div>
 
-        {/* Submit Fault Audit + Expire Pool */}
-        <div className="space-y-4">
+            <div>
+              <label className={labelClass}>Incident Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Upstream ID</label>
+                <input
+                  type="text"
+                  value={upstreamId}
+                  onChange={(e) => setUpstreamId(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Downstream ID</label>
+                <input
+                  type="text"
+                  value={downstreamId}
+                  onChange={(e) => setDownstreamId(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Upstream Beneficiary (0x...)</label>
+                <input
+                  type="text"
+                  value={upstreamBeneficiary}
+                  onChange={(e) => setUpstreamBeneficiary(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Downstream Beneficiary (0x...)</label>
+                <input
+                  type="text"
+                  value={downstreamBeneficiary}
+                  onChange={(e) => setDownstreamBeneficiary(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Fault Charter</label>
+              <textarea
+                rows={2}
+                value={charter}
+                onChange={(e) => setCharter(e.target.value)}
+                className="w-full rounded-md border border-white/[0.08] bg-[#09090B] px-3 py-2 text-xs leading-relaxed text-[#FAFAFA] placeholder-[#52525B] focus:border-white/25 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Allowed Source Prefix (40-hex SHA pinned)</label>
+              <input
+                type="text"
+                value={allowedPrefix}
+                onChange={(e) => setAllowedPrefix(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Indemnity Escrow (GEN)</label>
+                <input
+                  type="text"
+                  value={indemnityGen}
+                  onChange={(e) => setIndemnityGen(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>TTL (Seconds)</label>
+                <input
+                  type="number"
+                  value={ttlSeconds}
+                  onChange={(e) => setTtlSeconds(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#FAFAFA] px-3.5 py-2 text-xs font-medium text-[#09090B] transition hover:bg-white/90"
+              >
+                <Coins className="h-3.5 w-3.5" />
+                Fund &amp; Open Pool
+              </button>
+            </div>
+          </form>
+
+          {/* Settle Expired Pool */}
+          <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-white/[0.08] bg-[#0F0F12] p-5">
+            <div className="w-40">
+              <label className={labelClass}>Pool ID to Expire</label>
+              <input
+                type="text"
+                value={expirePoolId}
+                onChange={(e) => setExpirePoolId(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleSettleExpired()}
+              className="rounded-md border border-white/[0.12] bg-[#16161B] px-3.5 py-2 font-mono text-xs font-medium text-[#FAFAFA] transition hover:border-white/[0.2]"
+            >
+              settle_expired_pool
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Submit Audit + Live On-Chain State */}
+        <div className="space-y-5 lg:col-span-6">
           <form
             onSubmit={(e) => void handleSubmitAudit(e)}
-            className="rounded border border-[#1F293B] bg-[#11161F] p-4 space-y-3"
+            className="rounded-lg border border-white/[0.08] bg-[#0F0F12] p-5 space-y-4"
           >
-            <div className="flex items-center gap-2 font-display text-sm font-semibold text-[#F1F5F9]">
-              <Send className="h-4 w-4 text-[#10B981]" />
-              submit_fault_audit
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2">
+                <Send className="h-4 w-4 text-[#A1A1AA]" />
+                <span className="font-mono text-xs font-medium text-[#FAFAFA]">
+                  submit_fault_audit
+                </span>
+              </div>
+              <span className="text-[11px] text-[#71717A]">Commit-Pinned Evidence</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                  Pool ID
-                </label>
+                <label className={labelClass}>Pool ID</label>
                 <input
                   type="text"
                   value={auditPoolId}
                   onChange={(e) => setAuditPoolId(e.target.value)}
-                  className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                  Start Line
-                </label>
+                <label className={labelClass}>Start Line</label>
                 <input
                   type="number"
                   value={startLine}
                   onChange={(e) => setStartLine(e.target.value)}
-                  className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                  End Line
-                </label>
+                <label className={labelClass}>End Line</label>
                 <input
                   type="number"
                   value={endLine}
                   onChange={(e) => setEndLine(e.target.value)}
-                  className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                Immutable Evidence URL
-              </label>
+              <label className={labelClass}>Immutable Evidence URL</label>
               <input
                 type="text"
                 value={evidenceUrl}
                 onChange={(e) => setEvidenceUrl(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
+                className={inputClass}
               />
             </div>
 
-            <div className="flex items-end gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-3 pt-1">
               <div className="w-40">
-                <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                  Audit Bond (GEN)
-                </label>
+                <label className={labelClass}>Audit Bond (GEN)</label>
                 <input
                   type="text"
                   value={auditBondGen}
                   onChange={(e) => setAuditBondGen(e.target.value)}
-                  className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
+                  className={inputClass}
                 />
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 rounded border border-[#059669]/50 bg-[#064E3B]/50 px-3.5 py-1.5 font-mono text-xs font-medium text-[#6EE7B7] hover:bg-[#064E3B]"
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/[0.1] px-3.5 py-2 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/[0.18]"
               >
                 <Send className="h-3.5 w-3.5" />
                 Submit Fault Audit
@@ -624,103 +643,120 @@ export function LiveWalletConsole({
             </div>
           </form>
 
-          {/* Settle Expired Pool */}
-          <div className="flex flex-wrap items-end justify-between gap-3 rounded border border-[#1F293B] bg-[#11161F] p-4">
-            <div className="w-36">
-              <label className="mb-1 block font-mono text-[10px] uppercase text-[#94A3B8]">
-                Pool ID to Expire
-              </label>
-              <input
-                type="text"
-                value={expirePoolId}
-                onChange={(e) => setExpirePoolId(e.target.value)}
-                className="w-full rounded border border-[#1F293B] bg-[#0A0D12] px-2.5 py-1.5 font-mono text-xs text-[#F1F5F9]"
-              />
+          {/* Live On-Chain State Panel */}
+          <div className="overflow-hidden rounded-lg border border-white/[0.08] bg-[#0F0F12]">
+            <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-2.5">
+              <span className="text-xs font-medium text-[#FAFAFA]">
+                Live On-Chain State
+              </span>
+              <div className="flex items-center gap-1 rounded-md border border-white/[0.08] bg-[#09090B] p-0.5">
+                {(
+                  [
+                    { id: 'pools', label: `Pools (${pools.length})` },
+                    { id: 'audits', label: `Audits (${audits.length})` },
+                    { id: 'rejected', label: `Rejected (${rejected.length})` },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setStateTab(t.id)}
+                    className={`rounded px-2.5 py-1 text-[11px] font-medium transition ${
+                      stateTab === t.id
+                        ? 'bg-[#16161B] text-[#FAFAFA]'
+                        : 'text-[#71717A] hover:text-[#FAFAFA]'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => void handleSettleExpired()}
-              className="rounded border border-[#1F293B] bg-[#151C28] px-3.5 py-1.5 font-mono text-xs text-[#F1F5F9] hover:border-[#334155]"
-            >
-              settle_expired_pool
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Live On-Chain Tables */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded border border-[#1F293B] bg-[#11161F] p-3.5">
-          <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-[#94A3B8]">
-            Live Pools ({pools.length})
-          </div>
-          {pools.length === 0 ? (
-            <p className="font-mono text-xs text-[#475569]">No pools loaded.</p>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {pools.map((p, idx) => (
-                <div
-                  key={`${p.pool_id}-${idx}`}
-                  className="rounded border border-[#1F293B] bg-[#0A0D12] p-2 font-mono text-[11px]"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#FCD34D]">Pool #{p.pool_id}</span>
-                    <VerdictBadge verdict={p.verdict || p.status} compact />
+            <div className="max-h-72 overflow-y-auto">
+              {stateTab === 'pools' &&
+                (pools.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-xs text-[#71717A]">
+                    No pools loaded. Click &ldquo;Sync On-Chain Tables&rdquo; above.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-white/[0.06]">
+                    {pools.map((p, idx) => (
+                      <div
+                        key={`${p.pool_id}-${idx}`}
+                        className="flex items-center justify-between gap-3 px-4 py-3 text-xs hover:bg-white/[0.02]"
+                      >
+                        <div>
+                          <div className="font-mono font-medium text-[#FAFAFA]">
+                            Pool #{p.pool_id}
+                          </div>
+                          <div className="mt-0.5 font-mono text-[11px] text-[#71717A]">
+                            {p.upstream_id} → {p.downstream_id}
+                          </div>
+                        </div>
+                        <VerdictBadge verdict={p.verdict || p.status} compact />
+                      </div>
+                    ))}
                   </div>
-                  <div className="mt-1 text-[#94A3B8]">
-                    {p.upstream_id} → {p.downstream_id}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
 
-        <div className="rounded border border-[#1F293B] bg-[#11161F] p-3.5">
-          <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-[#94A3B8]">
-            Live Audits ({audits.length})
-          </div>
-          {audits.length === 0 ? (
-            <p className="font-mono text-xs text-[#475569]">No audits loaded.</p>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {audits.map((a, idx) => (
-                <div
-                  key={`${a.audit_id}-${idx}`}
-                  className="rounded border border-[#1F293B] bg-[#0A0D12] p-2 font-mono text-[11px]"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#F1F5F9]">Audit #{a.audit_id}</span>
-                    <VerdictBadge verdict={a.verdict} reasonCode={a.reason_code} compact />
+              {stateTab === 'audits' &&
+                (audits.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-xs text-[#71717A]">
+                    No audits loaded.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-white/[0.06]">
+                    {audits.map((a, idx) => (
+                      <div
+                        key={`${a.audit_id}-${idx}`}
+                        className="flex items-center justify-between gap-3 px-4 py-3 text-xs hover:bg-white/[0.02]"
+                      >
+                        <div>
+                          <div className="font-mono font-medium text-[#FAFAFA]">
+                            Audit #{a.audit_id}
+                          </div>
+                          <div className="mt-0.5 font-mono text-[11px] text-[#71717A]">
+                            Pool #{a.pool_id} · L{a.start_line}–L{a.end_line}
+                          </div>
+                        </div>
+                        <VerdictBadge
+                          verdict={a.verdict}
+                          reasonCode={a.reason_code}
+                          compact
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <div className="mt-1 text-[#94A3B8]">
-                    Pool #{a.pool_id} · L{a.start_line}–L{a.end_line}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
 
-        <div className="rounded border border-[#1F293B] bg-[#11161F] p-3.5">
-          <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-[#94A3B8]">
-            Rejected Submissions ({rejected.length})
-          </div>
-          {rejected.length === 0 ? (
-            <p className="font-mono text-xs text-[#475569]">No rejections recorded.</p>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {rejected.map((r, idx) => (
-                <div
-                  key={`${r.id ?? idx}`}
-                  className="rounded border border-[#1F293B] bg-[#0A0D12] p-2 font-mono text-[11px]"
-                >
-                  <VerdictBadge verdict={r.reason || r.reason_code || 'REJECTED'} compact />
-                  {r.detail && <div className="mt-1 text-[#94A3B8]">{r.detail}</div>}
-                </div>
-              ))}
+              {stateTab === 'rejected' &&
+                (rejected.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-xs text-[#71717A]">
+                    No rejections recorded.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-white/[0.06]">
+                    {rejected.map((r, idx) => (
+                      <div
+                        key={`${r.id ?? idx}`}
+                        className="space-y-1 px-4 py-3 text-xs hover:bg-white/[0.02]"
+                      >
+                        <VerdictBadge
+                          verdict={r.reason || r.reason_code || 'REJECTED'}
+                          compact
+                        />
+                        {r.detail && (
+                          <div className="font-mono text-[11px] text-[#A1A1AA]">
+                            {r.detail}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

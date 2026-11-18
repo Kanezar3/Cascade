@@ -50,29 +50,28 @@ export function AppealWindowPanel({
   }
 
   return (
-    <div className="rounded border border-[#1F293B] bg-[#11161F] px-3.5 py-2.5">
+    <div className="rounded-lg border border-white/[0.08] bg-[#0F0F12] px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs">
           {isFinalized ? (
-            <CheckCircle2 className="h-3.5 w-3.5 text-[#10B981]" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
           ) : isAppealable ? (
-            <Gavel className="h-3.5 w-3.5 text-[#F59E0B]" />
+            <Gavel className="h-3.5 w-3.5 text-amber-400" />
           ) : (
-            <Clock className="h-3.5 w-3.5 text-[#94A3B8]" />
+            <Clock className="h-3.5 w-3.5 text-[#71717A]" />
           )}
-          <span className="font-mono uppercase tracking-wider text-[#94A3B8]">
-            Optimistic Appeal Window
-          </span>
-          <span className="rounded border border-[#1F293B] bg-[#0A0D12] px-2 py-0.5 font-mono text-[11px] text-[#F1F5F9]">
-            {liveStatus ? `${liveStatus.statusName} (${stage})` : 'UNVERIFIED'}
+          <span className="font-medium text-[#A1A1AA]">Optimistic Appeal Window</span>
+          <span className="rounded-md border border-white/[0.08] bg-[#16161B] px-2 py-0.5 font-mono text-[11px] text-[#FAFAFA]">
+            {liveStatus ? `${liveStatus.statusName} (${stage})` : 'Unverified'}
           </span>
           {appealed && (
-            <span className="rounded border border-[#9333EA]/50 bg-[#3B0764]/50 px-2 py-0.5 font-mono text-[10px] text-[#D8B4FE]">
-              APPEALED
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-violet-500/25 bg-violet-500/[0.08] px-2 py-0.5 font-mono text-[11px] text-violet-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+              Appealed
             </span>
           )}
           {remaining !== null && remaining !== undefined && remaining > 0 && (
-            <span className="font-mono text-[11px] text-[#FCD34D]">
+            <span className="font-mono text-[11px] text-amber-300">
               {remaining}s remaining
             </span>
           )}
@@ -84,28 +83,29 @@ export function AppealWindowPanel({
               type="button"
               onClick={handleAppeal}
               disabled={submitting}
-              className="inline-flex items-center gap-1.5 rounded border border-[#D97706]/50 bg-[#451A03]/60 px-2.5 py-1 font-mono text-[11px] font-medium text-[#FCD34D] transition hover:bg-[#451A03] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/[0.08] px-2.5 py-1 text-xs font-medium text-amber-300 transition hover:bg-amber-500/[0.14] disabled:opacity-50"
             >
-              <ShieldAlert className="h-3 w-3" />
+              <ShieldAlert className="h-3.5 w-3.5" />
               {submitting ? 'Submitting Appeal...' : 'Appeal Consensus'}
             </button>
           )}
           {isFinalized && (
-            <span className="font-mono text-[11px] text-[#6EE7B7]">
-              FINALIZED · IMMUTABLE
+            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Finalized · Immutable
             </span>
           )}
         </div>
       </div>
 
       {appealError && (
-        <div className="mt-2 flex items-center gap-1.5 rounded border border-[#DC2626]/50 bg-[#450A0A]/40 px-2.5 py-1.5 text-xs text-[#FCA5A5]">
+        <div className="mt-2.5 flex items-center gap-2 rounded-md border border-red-500/25 bg-red-500/[0.08] px-3 py-2 text-xs text-red-300">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>{appealError}</span>
         </div>
       )}
       {appealResult && (
-        <div className="mt-2 rounded border border-[#059669]/50 bg-[#064E3B]/40 px-2.5 py-1.5 font-mono text-[11px] text-[#6EE7B7]">
+        <div className="mt-2.5 rounded-md border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2 font-mono text-[11px] text-emerald-300">
           Appeal submitted: {appealResult}
         </div>
       )}
