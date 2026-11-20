@@ -53,7 +53,7 @@ auditor_total = stake_wei + auditor_bounty
 
 - **Exact Wei Conservation**: `indemnity_payout + auditor_total == pool_collateral + stake_wei`.
 - **Pull-Based Withdrawals**: Credits are stored in `refundable_balances[address]`. Beneficiaries and auditors call `withdraw_refundable()`, which zeroes their balance first (checks-effects-interactions) and transfers GEN via `_EoaRecipient(sender).emit_transfer(value=amount)`.
-- **Pool Expiry (`settle_expired_pool`)**: Once `now > deadline_ts + CLAIM_GRACE_SECONDS` (or `now > deadline_ts` when no fault was settled), the pool transitions to `EXPIRED_REFUNDED` and returns `pool_collateral` to the pool creator's refundable balance.
+- **Pool Expiry (`settle_expired_pool`)**: Once `now_ts >= deadline_ts + AUDIT_GRACE_SECONDS` (`AUDIT_GRACE_SECONDS = 15`), the pool transitions to `EXPIRED_REFUNDED` and returns `pool_collateral` to the pool creator's refundable balance.
 
 ---
 

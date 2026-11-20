@@ -407,7 +407,7 @@ def test_downstream_at_fault_settlement():
     assert int(json.loads(c.get_refundable_balance(AUDITOR))["refundable_wei"]) == 450
 
 
-def test_insufficient_trace_preserves_open_pool_and_credits_creator():
+def test_insufficient_trace_preserves_open_pool_and_refunds_auditor():
     mod, gl = _load_cascade_module()
     c = mod.Cascade()
     pool = _open_sample_pool(c, gl)
@@ -431,7 +431,8 @@ def test_insufficient_trace_preserves_open_pool_and_credits_creator():
     assert res["audit"]["audit_status"] == "INSUFFICIENT_RETRYABLE"
     assert res["pool"]["status"] == "OPEN"
     assert res["pool"]["audit_attempts"] == 1
-    assert int(json.loads(c.get_refundable_balance(CREATOR))["refundable_wei"]) == 120
+    assert int(json.loads(c.get_refundable_balance(AUDITOR))["refundable_wei"]) == 120
+    assert int(json.loads(c.get_refundable_balance(CREATOR))["refundable_wei"]) == 0
     assert int(json.loads(c.get_protocol_stats())["total_locked_wei"]) == 1000
 
 
@@ -572,7 +573,12 @@ def test_settle_expired_pool_and_withdraw_refundable():
     with pytest.raises(mod.gl.vm.UserError, match="POOL_NOT_EXPIRED"):
         c.settle_expired_pool(pool["pool_id"])
 
-    # After deadline -> EXPIRED_REFUNDED
+    # Inside AUDIT_GRACE_SECONDS (deadline + 10s < deadline + 15s) -> still raises UserError("POOL_NOT_EXPIRED")
+    _set_tx(gl, CREATOR, 0, dt="2026-11-18T12:01:00Z")
+    with pytest.raises(mod.gl.vm.UserError, match="POOL_NOT_EXPIRED"):
+        c.settle_expired_pool(pool["pool_id"])
+
+    # After deadline + AUDIT_GRACE_SECONDS -> EXPIRED_REFUNDED
     _set_tx(gl, CREATOR, 0, dt="2026-11-18T12:05:00Z")
     res_exp = json.loads(c.settle_expired_pool(pool["pool_id"]))
     assert res_exp["ok"] is True

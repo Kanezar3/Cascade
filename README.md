@@ -23,7 +23,7 @@ flowchart TD
   F -->|"INSUFFICIENT_TRACE / UNVERIFIABLE_FETCH"| G["Pool Remains OPEN & Refund Auditor Bond"]
   F -->|"UPSTREAM_AT_FAULT"| H["80% Downstream Beneficiary + 20% Auditor Bounty"]
   F -->|"DOWNSTREAM_AT_FAULT"| I["80% Upstream Beneficiary + 20% Auditor Bounty"]
-  D -->|"Deadline Expired"| J["settle_expired_pool() -> Refund Pool Creator"]
+  D -->|"Deadline + 15s Grace Expired"| J["settle_expired_pool() -> Refund Pool Creator"]
   H & I & C & G & J --> K["withdraw_refundable() via EOA Pull"]
 ```
 
@@ -32,22 +32,22 @@ flowchart TD
 ## Live StudioNet Deployment
 
 - **Network:** GenLayer StudioNet (`Chain ID 61999`, RPC `https://studio.genlayer.com/api`)
-- **Cascade Contract:** [`0x800450113F99B1BBb3136363a22AB39fE92F3d5e`](https://explorer-studio.genlayer.com/address/0x800450113F99B1BBb3136363a22AB39fE92F3d5e)
-- **Deploy Tx:** [`0xca847cb199d4979b3b306f43533b4a85333e2735daaaf52a1f9ffb8f25345586`](https://explorer-studio.genlayer.com/tx/0xca847cb199d4979b3b306f43533b4a85333e2735daaaf52a1f9ffb8f25345586)
-- **Contract Source SHA-256:** `65488d3e0f45f3565f8b677128705a1722648406e7b1948f72c4470fda62d44f`
+- **Cascade Contract:** [`0x25e9785bf2dE3d1AD2dDE7778dd090f0a5114937`](https://explorer-studio.genlayer.com/address/0x25e9785bf2dE3d1AD2dDE7778dd090f0a5114937)
+- **Deploy Tx:** [`0x706bc6c5255f9b5b4ebc81534cf19a070149cb58c6594ce1e713daf8b6cca994`](https://explorer-studio.genlayer.com/tx/0x706bc6c5255f9b5b4ebc81534cf19a070149cb58c6594ce1e713daf8b6cca994)
+- **Contract Source SHA-256:** `db37ee24afc149d700a41c66fce41788e8f861e14268ed32e6630a12086a0c0c`
 - **EvidenceProbe Contract:** [`0x7A500B8D5FD75A28aA282Be6ECF274f49d6D7dc8`](https://explorer-studio.genlayer.com/address/0x7A500B8D5FD75A28aA282Be6ECF274f49d6D7dc8)
 
 ### Finalized 7-Case StudioNet Proof Bundle (`deploy/proof.json`)
 
 | Exhibit | Case | Verdict : Reason Code | StudioNet Tx |
 | :--- | :--- | :--- | :--- |
-| `EX-01` | Gate-1 TOO_VAGUE Charter Rejection & Deposit Refund | `TOO_VAGUE : SUBJECTIVE_OR_UNMEASURABLE` | [`0x40e2510a...`](https://explorer-studio.genlayer.com/tx/0x40e2510a6b7062660960b8816aec21f34fa43fd2b8d4e1ad6b7563897a565715) |
-| `EX-02` | Gate-1 OBSERVABLE_CHARTER Pool #1–#4 Creation | `OBSERVABLE_CHARTER : CONCRETE_CAUSAL_CHARTER` | [`0xa986cdc7...`](https://explorer-studio.genlayer.com/tx/0xa986cdc73212ced7c9048050276751fd0b737ff5b448ed1ceccdfad322c8c84e) |
-| `EX-03` | Upstream Fault: Cloudflare Miami BGP Routing Defect (Pool #1) | `UPSTREAM_AT_FAULT : UPSTREAM_CONFIG_OR_ROUTING_DEFECT` | [`0x70a3cb7f...`](https://explorer-studio.genlayer.com/tx/0x70a3cb7f6f206cc050a649e8ac01791dc8b018e96879e46308bb8302cfbf60f3) |
-| `EX-04` | Downstream Fault: Workers KV Cloud Store Outage (Pool #2) | `DOWNSTREAM_AT_FAULT : DOWNSTREAM_STORAGE_OR_DB_OUTAGE` | [`0x3363abbd...`](https://explorer-studio.genlayer.com/tx/0x3363abbd6613e2745467d02afa88569dd8c232a769b6f58e4003869325e8ed22) |
-| `EX-05` | Insufficient Trace: Unrelated Telemetry Window (Pool #3, Attempt 1) | `INSUFFICIENT_TRACE : NO_CAUSAL_PROOF_IN_SLICE` | [`0x14e7ced8...`](https://explorer-studio.genlayer.com/tx/0x14e7ced83afde84d3739abef89fe0f3f9cb4c755614d81342a4580b2de146f59) |
-| `EX-06` | Insufficient Trace: Adversarial Prompt Injection Ignored (Pool #3, Attempt 2) | `INSUFFICIENT_TRACE : ADVERSARIAL_INJECTION_IGNORED` | [`0x5ee5969c...`](https://explorer-studio.genlayer.com/tx/0x5ee5969cc4749da4bc2097496e9062db835553d02b86b04a17bf51d3e63e64cc) |
-| `EX-07` | Short-Window Expiry Settlement & EOA Native Withdrawals (Pool #4) | `EXPIRED_REFUNDED : POOL_DEADLINE_EXPIRED` | [`0xcbf5cc5a...`](https://explorer-studio.genlayer.com/tx/0xcbf5cc5a631568eff1c6ab09a8594b5a6dd8ab3a5d1d787d33d633b0eb4aa264) |
+| `EX-01` | Gate-1 TOO_VAGUE Charter Rejection & Deposit Refund | `TOO_VAGUE : SUBJECTIVE_OR_UNMEASURABLE` | [`0x6ce14301...`](https://explorer-studio.genlayer.com/tx/0x6ce143013d5ac98b85a4f3b8f62c546f2988654a115f3d85d26549f84e11a36b) |
+| `EX-02` | Gate-1 OBSERVABLE_CHARTER Pool #1–#4 Creation | `OBSERVABLE_CHARTER : CONCRETE_CAUSAL_CHARTER` | [`0x8f21ffc6...`](https://explorer-studio.genlayer.com/tx/0x8f21ffc651bb8cc6010637403318a19144357eb339db56ceb6bec8432e63831f) |
+| `EX-03` | Upstream Fault: Cloudflare Miami BGP Routing Defect (Pool #1) | `UPSTREAM_AT_FAULT : UPSTREAM_CONFIG_OR_ROUTING_DEFECT` | [`0x55d2fd0c...`](https://explorer-studio.genlayer.com/tx/0x55d2fd0cc12850ea284c36a894abfb99df36ba8204c91192e7b22f9fa7334efe) |
+| `EX-04` | Downstream Fault: Workers KV Cloud Store Outage (Pool #2) | `DOWNSTREAM_AT_FAULT : DOWNSTREAM_STORAGE_OR_DB_OUTAGE` | [`0x77b3c442...`](https://explorer-studio.genlayer.com/tx/0x77b3c442f3f73b589d3c471be7b7dd816586b03a127056d0ee210617b100b404) |
+| `EX-05` | Insufficient Trace: Unrelated Telemetry Window (Pool #3, Attempt 1) | `INSUFFICIENT_TRACE : NO_CAUSAL_PROOF_IN_SLICE` | [`0xd2b11eb4...`](https://explorer-studio.genlayer.com/tx/0xd2b11eb4d6cc5243d41b76591563a351f6575948eec9c5087c57e33bc1c70fe5) |
+| `EX-06` | Insufficient Trace: Adversarial Prompt Injection Ignored (Pool #3, Attempt 2) | `INSUFFICIENT_TRACE : ADVERSARIAL_INJECTION_IGNORED` | [`0x71c7d835...`](https://explorer-studio.genlayer.com/tx/0x71c7d835c3a382fdf9b211b85484330ade199960f21a03ad944892bb972a0ba0) |
+| `EX-07` | Short-Window Expiry Settlement & EOA Native Withdrawals (Pool #4) | `EXPIRED_REFUNDED : POOL_DEADLINE_EXPIRED` | [`0xde3ba686...`](https://explorer-studio.genlayer.com/tx/0xde3ba6861218aff272566020e1ea6f092325fa9b1460e4beea5682e7f569e0dc) |
 
 ---
 

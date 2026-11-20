@@ -10,7 +10,7 @@ from genlayer import *
 
 
 MAX_AUDIT_ATTEMPTS = 5
-CLAIM_GRACE_SECONDS = 3600
+AUDIT_GRACE_SECONDS = 15
 MAX_LINE_WINDOW = 120
 MAX_SNIPPET_CHARS = 3000
 MIN_QUOTE_LEN = 12
@@ -683,7 +683,7 @@ class Cascade(gl.Contract):
             self._credit_refundable(sender, stake_wei)
         elif verdict == "INSUFFICIENT_TRACE":
             audit_status = "INSUFFICIENT_RETRYABLE"
-            self._credit_refundable(str(pool["creator"]), stake_wei)
+            self._credit_refundable(sender, stake_wei)
         else:
             audit_status = "CONCLUSIVE_SETTLED"
             pool_collateral = u256(int(pool["collateral_wei"]))
@@ -750,7 +750,7 @@ class Cascade(gl.Contract):
         if pool["status"] != "OPEN":
             raise gl.vm.UserError("POOL_NOT_OPEN")
 
-        if now_ts < int(pool["deadline_ts"]):
+        if now_ts < int(pool["deadline_ts"]) + AUDIT_GRACE_SECONDS:
             raise gl.vm.UserError("POOL_NOT_EXPIRED")
 
         collateral_wei = u256(int(pool["collateral_wei"]))

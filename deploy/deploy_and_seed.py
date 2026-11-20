@@ -353,8 +353,8 @@ def main() -> None:
         ),
     )
 
-    if "pool4_deadline" not in state:
-        state["pool4_deadline"] = int(time.time()) + 150
+    if "case2_pool4_expiry" not in state.get("txs", {}) or "pool4_deadline" not in state:
+        state["pool4_deadline"] = int(time.time()) + 90
         save_state(state)
     pool4_dl = int(state["pool4_deadline"])
 
@@ -434,12 +434,12 @@ def main() -> None:
         ),
     )
 
-    # Case 7 (EX-07): Wait until pool4_dl + 15, settle_expired_pool(4), and withdraw_refundable() from all 4 accounts
-    wait_until = pool4_dl + 15
+    # Case 7 (EX-07): Wait until pool4_dl + 45 (past deadline + AUDIT_GRACE_SECONDS=15 + StudioNet clock skew), settle_expired_pool(4), and withdraw_refundable() from all 4 accounts
+    wait_until = pool4_dl + 45
     now = time.time()
     if now < wait_until:
         sleep_s = int(wait_until - now) + 1
-        print(f"Sleeping {sleep_s}s until Pool #4 deadline + 15s...", flush=True)
+        print(f"Sleeping {sleep_s}s until Pool #4 deadline + 45s (past 15s grace period)...", flush=True)
         time.sleep(sleep_s)
 
     case7_expire_tx, case7_expire_rec = run_step_tx(
@@ -655,8 +655,8 @@ def main() -> None:
             case2_p3_tx,
             case5_tx,
             case5_rec,
-            w_dep_tx,
-            "Non-conclusive audit preserves Pool #3 OPEN with audit_attempts=1; bond credited to creator.",
+            w_aud_tx,
+            "Non-conclusive audit preserves Pool #3 OPEN with audit_attempts=1; bond refunded to auditor.",
         ),
         make_audit_case(
             "EX-06",
@@ -666,8 +666,8 @@ def main() -> None:
             case2_p3_tx,
             case6_tx,
             case6_rec,
-            w_dep_tx,
-            "Prompt injection in protectai/rebuff slice ignored; Pool #3 remains OPEN with audit_attempts=2.",
+            w_aud_tx,
+            "Prompt injection in protectai/rebuff slice ignored; Pool #3 remains OPEN with audit_attempts=2; bond refunded to auditor.",
         ),
         {
             "case_id": "case_7_expiry_and_withdrawals",
@@ -702,7 +702,7 @@ def main() -> None:
             "slashed_party": "",
             "exonerated_party": "",
             "explorer_url": f"{EXPLORER_URL}/tx/{case7_expire_tx}",
-            "notes": "Pool #4 settled EXPIRED_REFUNDED after deadline + 15s; all 4 EOA accounts withdrew via emit_transfer.",
+            "notes": "Pool #4 settled EXPIRED_REFUNDED after deadline + 15s AUDIT_GRACE_SECONDS; all 4 EOA accounts withdrew via emit_transfer.",
         },
     ]
 
